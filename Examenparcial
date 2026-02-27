@@ -1,0 +1,120 @@
+//EXAMEN 4 PARCIAL LISSE - Andrea Carrillo de la Rosa 
+
+
+
+#include <stdint.h>
+
+//Se definen las direcciones base 
+
+#define PERIPH_BASE        0x40000000UL
+#define AHB1_OFFSET        0x00020000UL
+#define AHB1_BASE          (PERIPH_BASE + AHB1_OFFSET)
+
+#define GPIOA_OFFSET       0x0000UL
+#define GPIOB_OFFSET       0x0400UL
+#define GPIOC_OFFSET       0x0800UL
+#define RCC_OFFSET         0x3800UL
+
+#define GPIOA_BASE         (AHB1_BASE + GPIOA_OFFSET)
+#define GPIOB_BASE         (AHB1_BASE + GPIOB_OFFSET)
+#define GPIOC_BASE         (AHB1_BASE + GPIOC_OFFSET)
+#define RCC_BASE           (AHB1_BASE + RCC_OFFSET)
+
+//Se realizan los registros 
+
+#define RCC_AHB1ENR        (*(volatile uint32_t*)(RCC_BASE + 0x30))
+
+#define GPIOA_MODER        (*(volatile uint32_t*)(GPIOA_BASE + 0x00))
+#define GPIOA_IDR          (*(volatile uint32_t*)(GPIOA_BASE + 0x10))
+#define GPIOA_ODR          (*(volatile uint32_t*)(GPIOA_BASE + 0x14))
+
+#define GPIOB_MODER        (*(volatile uint32_t*)(GPIOB_BASE + 0x00))
+#define GPIOB_IDR          (*(volatile uint32_t*)(GPIOB_BASE + 0x10))
+
+#define GPIOC_MODER        (*(volatile uint32_t*)(GPIOC_BASE + 0x00))
+#define GPIOC_IDR          (*(volatile uint32_t*)(GPIOC_BASE + 0x10))
+
+//Se desarrollan las mascaras 
+
+#define PB0_MASK   (1<<0)
+#define PB1_MASK   (1<<1)
+#define PC0_MASK   (1<<0)
+#define PC1_MASK   (1<<1)
+
+#define LED_ODD    (1<<0)   // PA0
+#define LED_POW2   (1<<1)   // PA1
+
+//Se hace la tabla de los siete segmentos 
+
+uint8_t tabla7seg[16] = {
+    0x7E, //0
+    0x30, //1
+    0x6D, //2
+    0x79, //3
+    0x33, //4
+    0x5B, //5
+    0x5F, //6
+    0x70, //7
+    0x7F, //8
+    0x7B, //9
+    0x77, //A
+    0x1F, //b
+    0x4E, //C
+    0x3D, //d
+    0x4F, //E
+    0x47  //F
+};
+
+int main()
+{
+    //Se activa el reloj
+    RCC_AHB1ENR |= (1<<0); // GPIOA  
+    RCC_AHB1ENR |= (1<<1); // GPIOB
+    RCC_AHB1ENR |= (1<<2); // GPIOC
+
+    //Se configura los modos 
+    // Asigno PA0–PA8 como salida
+    GPIOA_MODER &= ~(0x3FFFF);      // se limpia 
+    GPIOA_MODER |=  (0x15555);      // output
+
+   
+    GPIOB_MODER &= ~(0xF);  // Se asigna PB0, PB1 como entrada
+    GPIOC_MODER &= ~(0xF);       
+
+    while(1)
+    {
+        uint8_t numero = 0;
+
+        uint8_t b0 = (GPIOB_IDR & PB0_MASK) ? 1 : 0;     //Se empiezan a leer switches 
+        uint8_t b1 = (GPIOB_IDR & PB1_MASK) ? 1 : 0;
+        uint8_t c0 = (GPIOC_IDR & PC0_MASK) ? 1 : 0;
+        uint8_t c1 = (GPIOC_IDR & PC1_MASK) ? 1 : 0;
+
+        //Se hace la logica por PB1-PB0-PC1-PC0
+        numero = (b1<<3) | (b0<<2) | (c1<<1) | (c0<<0);
+
+        // Se hace la lógica para el numero impar 
+        if(numero & 0x01)
+            GPIOA_ODR |= LED_ODD;
+        else
+            GPIOA_ODR &= ~LED_ODD;
+
+        //Se hace la logica de condición para la potencia de 2
+        if(numero != 0 && ((numero & (numero-1)) == 0))
+            GPIOA_ODR |= LED_POW2;
+        else
+            GPIOA_ODR &= ~LED_POW2;
+
+        //Se muestra
+        uint8_t segmentos = tabla7seg[numero];
+
+        // se limpian los seg PA2-PA8
+        GPIOA_ODR &= ~(0x1FC);
+
+        //Se pone el colocador para desplazar PA2
+        GPIOA_ODR |= (segmentos << 2);
+    }
+}
+
+
+//Finaliza mi codigo

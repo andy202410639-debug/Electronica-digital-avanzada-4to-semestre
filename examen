@@ -1,0 +1,61 @@
+//Codigo de examen - Andrea Carrillo de la Rosa
+//Bomba
+
+
+uint32_t valorADC = 0;
+int nivel = 0;
+uint8_t bombaEncendida = 0; // 0 = Apagado / 1 = Encendida
+
+uint16_t numeros_display[] = {
+    0x007F, // 0
+    0x0006, // 1
+    0x005B, // 2
+    0x004F, // 3
+    0x0066, // 4
+    0x006D, // 5
+    0x007D, // 6
+    0x0007, // 7
+    0x007F  // 8
+};
+
+void mostrarNivel(int n) {
+
+    HAL_GPIO_WritePin(GPIOA, 0x7F0, GPIO_PIN_RESET); 
+    HAL_GPIO_WritePin(GPIOA, numeros_display[n] << 4, GPIO_PIN_SET);
+}
+
+
+while (1) {
+    // Lee el sensor de nivel
+    HAL_ADC_Start(&hadc1);
+    if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK) {
+        valorADC = HAL_ADC_GetValue(&hadc1);
+    }
+    HAL_ADC_Stop(&hadc1);
+
+    nivel = (valorADC * 8) / 4095;
+
+    // READY ¿si nivel > 3
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, (nivel > 3) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    
+    // WARNING si nivel < 2
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, (nivel < 2) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+
+    // logica de la bomba 
+    if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_RESET && nivel > 3) {
+        bombaEncendida = 1;
+    }
+
+    // Se apaga automatico si el  nivel cae a 1 o 0
+    if (nivel <= 1) {
+        bombaEncendida = 0;
+    }
+
+    // Activar LED WORK 
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, (bombaEncendida) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+
+    // Se actualiza el display 
+    mostrarNivel(nivel);
+
+    HAL_Delay(100); 
+};

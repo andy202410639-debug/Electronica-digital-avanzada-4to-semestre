@@ -1,5 +1,5 @@
 //Codigo de examen - Andrea Carrillo de la Rosa
-//Bomba
+//Bomba de agua 
 
 
 uint32_t valorADC = 0;
@@ -33,7 +33,7 @@ while (1) {
     }
     HAL_ADC_Stop(&hadc1);
 
-    nivel = (valorADC * 8) / 4095;
+    nivel = (valorADC * 8) / 4095;//Matemarica del sistema
 
     // READY ¿si nivel > 3
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, (nivel > 3) ? GPIO_PIN_SET : GPIO_PIN_RESET);
